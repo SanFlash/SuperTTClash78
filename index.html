@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TableTennis Clash78 | Tournament Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/additional.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #6200EE;
+            --primary-variant: #3700B3;
+            --secondary-color: #03DAC6;
+            --background-color: #F5F5F5;
+            --surface-color: #FFFFFF;
+            --error-color: #B00020;
+            --on-primary: #FFFFFF;
+            --on-secondary: #000000;
+            --on-background: #000000;
+            --on-surface: #000000;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--background-color);
+            margin: 0;
+            transition: background-color 0.3s ease;
+        }
+
+        .android-header {
+            background-color: var(--primary-color);
+            color: var(--on-primary);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+        }
+
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 280px;
+            height: 100%;
+            background-color: var(--surface-color);
+            z-index: 1100;
+            transform: translateX(-100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .sidebar.open {
+            transform: translateX(0);
+        }
+
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1050;
+            display: none;
+        }
+
+        .sidebar-overlay.active {
+            display: block;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 24px;
+            color: #616161;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            border-radius: 25px;
+            margin: 4px 8px;
+        }
+
+        .nav-item:hover {
+            background-color: #F5F5F5;
+        }
+
+        .nav-item.active {
+            background-color: #E8E0F7;
+            color: var(--primary-color);
+            font-weight: 500;
+        }
+
+        .nav-item i {
+            margin-right: 32px;
+            width: 24px;
+            text-align: center;
+            font-size: 20px;
+        }
+
+        .main-content {
+            margin-top: 64px;
+            padding: 24px;
+            min-height: calc(100vh - 128px);
+            transition: padding 0.3s;
+        }
+
+        @media (min-width: 1024px) {
+            .sidebar {
+                transform: translateX(0);
+                top: 64px;
+            }
+
+            .sidebar-overlay {
+                display: none !important;
+            }
+
+            .main-content {
+                margin-left: 280px;
+            }
+
+            .android-header {
+                padding-left: 24px;
+            }
+
+            .menu-toggle {
+                display: none;
+            }
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 1px solid #EEEEEE;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+        }
+
+        .ripple {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .fab {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background-color: var(--secondary-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            z-index: 900;
+            border: none;
+            outline: none;
+        }
+
+        .avatar-container {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            overflow: hidden;
+            background-color: #E0E0E0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .avatar-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: slideUp 0.4s cubic-bezier(0, 0, 0.2, 1);
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .footer {
+            background-color: #1A1A1A;
+            color: #9E9E9E;
+            padding: 40px 24px;
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        .dark-mode {
+            --background-color: #121212;
+            --surface-color: #1E1E1E;
+            --on-background: #FFFFFF;
+            --on-surface: #FFFFFF;
+            color: #FFFFFF;
+        }
+
+        .dark-mode .card {
+            background-color: #1E1E1E;
+            color: #FFFFFF;
+            border-color: #333333;
+        }
+
+        .dark-mode .nav-item {
+            color: #BDBDBD;
+        }
+
+        .dark-mode .nav-item.active {
+            background-color: #3700B3;
+            color: #FFFFFF;
+        }
+
+        .dark-mode .footer {
+            background-color: #000000;
+        }
+
+        /* Material Ripple Animation */
+        .ripple-effect {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            transform: scale(0);
+            animation: ripple 0.6s linear;
+            pointer-events: none;
+        }
+
+        @keyframes ripple {
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #BDBDBD;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 640px) {
+            .main-content {
+                padding: 16px;
+            }
+
+            .card {
+                padding: 16px;
+                border-radius: 8px;
+            }
+
+            .grid-cols-4 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Sidebar -->
+    <div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+    <div id="sidebar" class="sidebar">
+        <div class="p-6 border-b dark:border-gray-800">
+            <div class="flex items-center space-x-4 mb-4">
+                <div class="avatar-container w-16 h-16 border-blue-100 shadow-md">
+                    <img id="sidebarAvatar" src="assets/images/logo.jpg" alt="User Avatar">
+                </div>
+                <div>
+                    <h3 class="font-bold text-lg leading-tight" id="userName">Satyendra Namdeo</h3>
+                    <p class="text-xs text-gray-500 font-medium uppercase tracking-wider" id="userEmail">Tournament Pro
+                    </p>
+                </div>
+            </div>
+        </div>
+        <nav class="mt-4 px-2">
+            <div class="nav-item active" onclick="showTab('dashboard'); closeSidebarOnMobile()" id="nav-dashboard">
+                <i class="fas fa-chart-pie"></i> Dashboard
+            </div>
+            <div class="nav-item" onclick="showTab('fixtures'); closeSidebarOnMobile()" id="nav-fixtures">
+                <i class="fas fa-calendar-alt"></i> Fixtures
+            </div>
+            <div class="nav-item" onclick="showTab('standings'); closeSidebarOnMobile()" id="nav-standings">
+                <i class="fas fa-trophy"></i> Points Table
+            </div>
+            <div class="nav-item" onclick="showTab('matches'); closeSidebarOnMobile()" id="nav-matches">
+                <i class="fas fa-table-tennis"></i> Match Entry
+            </div>
+            <div class="nav-item" onclick="showTab('players'); closeSidebarOnMobile()" id="nav-players">
+                <i class="fas fa-user-friends"></i> Players
+            </div>
+            <div class="nav-item" onclick="showTab('profile'); closeSidebarOnMobile()" id="nav-profile">
+                <i class="fas fa-user-circle"></i> Profile
+            </div>
+            <div class="mt-8 pt-4 border-t dark:border-gray-800">
+                <div class="nav-item" onclick="showTab('settings'); closeSidebarOnMobile()" id="nav-settings">
+                    <i class="fas fa-cog"></i> Settings
+                </div>
+                <div class="nav-item text-red-500" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </div>
+            </div>
+        </nav>
+        <div class="absolute bottom-4 left-0 w-full text-center px-6">
+            <p class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Version 2.0.4 - CoLS</p>
+        </div>
+    </div>
+
+    <!-- Top App Bar -->
+    <header class="android-header">
+        <button class="menu-toggle mr-4 text-white p-2 hover:bg-white hover:bg-opacity-10 rounded-full transition"
+            onclick="toggleSidebar()">
+            <i class="fas fa-bars text-xl"></i>
+        </button>
+        <div class="flex items-center flex-grow">
+            <div class="bg-white p-1 rounded-lg mr-3 shadow-sm">
+                <img src="assets/images/logo.jpg" alt="Logo" class="h-5 w-5">
+            </div>
+            <h1 class="text-xl font-bold tracking-tight">Clash78</h1>
+        </div>
+        <div class="flex items-center space-x-1 sm:space-x-3">
+            <button class="p-2 hover:bg-white hover:bg-opacity-10 rounded-full transition text-white">
+                <i class="fas fa-search"></i>
+            </button>
+            <button class="p-2 hover:bg-white hover:bg-opacity-10 rounded-full transition text-white">
+                <i class="fas fa-bell"></i>
+            </button>
+            <div class="avatar-container ml-2 scale-90 sm:scale-100" onclick="showTab('profile')">
+                <img id="headerAvatar" src="assets/images/logo.jpg" alt="User Avatar">
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+                <div>
+                    <h2 class="text-3xl font-black text-gray-800 dark:text-white">Tournament Feed</h2>
+                    <p class="text-gray-500 font-medium">Real-time match data & statistics</p>
+                </div>
+                <div
+                    class="bg-white dark:bg-gray-800 rounded-full px-4 py-2 shadow-sm border dark:border-gray-700 flex items-center space-x-2">
+                    <span id="connectionIndicator" class="w-2.5 h-2.5 rounded-full bg-red-500 scale-110"></span>
+                    <span id="connectionText"
+                        class="text-xs font-bold text-gray-600 dark:text-gray-300">DISCONNECTED</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <div class="card !mb-0 border-l-4 border-l-blue-500">
+                    <div class="text-2xl font-black text-blue-600" id="totalPlayers">0</div>
+                    <div class="text-gray-400 text-[10px] font-bold uppercase tracking-widest">Players</div>
+                </div>
+                <div class="card !mb-0 border-l-4 border-l-green-500">
+                    <div class="text-2xl font-black text-green-600" id="totalMatches">0</div>
+                    <div class="text-gray-400 text-[10px] font-bold uppercase tracking-widest">Fixtures</div>
+                </div>
+                <div class="card !mb-0 border-l-4 border-l-orange-500">
+                    <div class="text-2xl font-black text-orange-600" id="completedMatches">0</div>
+                    <div class="text-gray-400 text-[10px] font-bold uppercase tracking-widest">Played</div>
+                </div>
+                <div class="card !mb-0 border-l-4 border-l-purple-500">
+                    <div class="text-2xl font-black text-purple-600" id="activeGroups">0</div>
+                    <div class="text-gray-400 text-[10px] font-bold uppercase tracking-widest">Groups</div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="card">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-lg font-black uppercase tracking-tight">Recent Results</h3>
+                        <i class="fas fa-history text-gray-300"></i>
+                    </div>
+                    <div id="recentActivity" class="space-y-3">
+                        <div class="text-center py-12">
+                            <i class="fas fa-spinner fa-spin text-blue-500 text-2xl mb-4"></i>
+                            <p class="text-gray-400 text-sm font-medium">Syncing data...</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-lg font-black uppercase tracking-tight">Match Progress</h3>
+                        <i class="fas fa-chart-line text-gray-300"></i>
+                    </div>
+                    <div style="height: 280px;">
+                        <canvas id="progressChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fixtures Tab -->
+        <div id="fixtures" class="tab-content">
+            <h2 class="text-3xl font-black mb-1">Scheduling</h2>
+            <p class="text-gray-500 mb-8 font-medium">Generate and manage tournament brackets</p>
+
+            <div class="card">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-8">
+                    <div class="flex items-center space-x-4">
+                        <div
+                            class="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-600">
+                            <i class="fas fa-layer-group text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-black text-lg">Group Brackets</h3>
+                            <p class="text-gray-400 text-xs font-bold uppercase tracking-widest">Active Tournament</p>
+                        </div>
+                    </div>
+                    <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                        <select id="max-sets" class="bg-gray-50 dark:bg-gray-800 border dark:border-gray-700 rounded-2xl px-4 py-3 font-bold text-sm outline-none focus:ring-4 ring-blue-500/10 transition-all flex-1 min-w-[100px] text-center">
+                            <option value="1">1 Set</option>
+                            <option value="3">3 Sets</option>
+                            <option value="5" selected>5 Sets</option>
+                            <option value="7">7 Sets</option>
+                        </select>
+                        <button onclick="generateFixtures()"
+                            class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-2xl font-black shadow-lg shadow-blue-200 dark:shadow-none transition-all flex items-center justify-center">
+                            <i class="fas fa-magic mr-3"></i> GENERATE
+                        </button>
+                        <button onclick="deleteFixtures()"
+                            class="flex-1 bg-red-50 dark:bg-red-900/10 hover:bg-red-500 hover:text-white text-red-500 px-8 py-3 rounded-2xl font-black transition-all flex items-center justify-center border border-red-100 dark:border-red-900/30">
+                            <i class="fas fa-trash-alt mr-3"></i> DELETE ALL
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex overflow-x-auto pb-4 gap-3 no-scrollbar border-b dark:border-gray-800 mb-6">
+                    <button onclick="filterGroup('ALL')"
+                        class="group-filter px-6 py-2.5 rounded-xl bg-blue-600 text-white font-black text-sm transition"
+                        data-group="ALL">ALL</button>
+                    <button onclick="filterGroup('A')"
+                        class="group-filter px-6 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-500 font-bold text-sm transition"
+                        data-group="A">GROUP A</button>
+                    <button onclick="filterGroup('B')"
+                        class="group-filter px-6 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-500 font-bold text-sm transition"
+                        data-group="B">GROUP B</button>
+                    <button onclick="filterGroup('C')"
+                        class="group-filter px-6 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-500 font-bold text-sm transition"
+                        data-group="C">GROUP C</button>
+                    <button onclick="filterGroup('D')"
+                        class="group-filter px-6 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-500 font-bold text-sm transition"
+                        data-group="D">GROUP D</button>
+                </div>
+
+                <div id="fixturesContainer">
+                    <div class="text-center py-20 grayscale opacity-40">
+                        <i class="fas fa-calendar-times text-8xl mb-6"></i>
+                        <p class="text-lg font-black uppercase tracking-widest">No Active Fixtures</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Standings Tab -->
+        <div id="standings" class="tab-content">
+            <h2 class="text-3xl font-black mb-1">Rankings</h2>
+            <p class="text-gray-500 mb-8 font-medium">Live leaderboard and qualification status</p>
+            <div id="qualificationPredictions" class="mb-8"></div>
+            <div id="standingsContainer" class="space-y-6"></div>
+        </div>
+
+        <!-- Matches Tab -->
+        <div id="matches" class="tab-content">
+            <h2 class="text-3xl font-black mb-1">Scoring</h2>
+            <p class="text-gray-500 mb-8 font-medium">Record and validate match results</p>
+
+            <div class="card overflow-hidden">
+                <div class="bg-gray-50 dark:bg-gray-800/50 p-6 border-b dark:border-gray-800">
+                    <h3 class="font-black text-lg mb-4">Official Result Entry</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="relative">
+                            <i class="fas fa-users absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                            <select id="matchGroup" onchange="loadAvailableMatches()"
+                                class="w-full bg-white dark:bg-gray-700 border dark:border-gray-600 rounded-2xl pl-12 pr-4 py-3 font-bold text-sm appearance-none focus:ring-4 ring-blue-500/10 outline-none">
+                                <option value="">Select Group</option>
+                                <option value="A">Group A</option>
+                                <option value="B">Group B</option>
+                                <option value="C">Group C</option>
+                                <option value="D">Group D</option>
+                            </select>
+                        </div>
+                        <div class="relative">
+                            <i class="fas fa-clipboard-list absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                            <select id="matchSelect" onchange="loadMatchDetails()"
+                                class="w-full bg-white dark:bg-gray-700 border dark:border-gray-600 rounded-2xl pl-12 pr-4 py-3 font-bold text-sm appearance-none focus:ring-4 ring-blue-500/10 outline-none">
+                                <option value="">Choose Match</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="matchEntryForm" style="display: none;" class="p-6">
+                    <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-8 mb-10">
+                        <div
+                            class="text-center w-full p-8 rounded-3xl bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/30">
+                            <div
+                                class="w-16 h-16 rounded-full bg-white mx-auto mb-4 shadow-sm flex items-center justify-center text-blue-600 font-black text-2xl">
+                                1</div>
+                            <h4 id="player1Name" class="font-black text-xl mb-6 text-blue-700 dark:text-blue-400">PLAYER
+                                ONE</h4>
+                            <div id="player1Sets" class="flex flex-wrap justify-center gap-3"></div>
+                        </div>
+                        <div class="flex items-center justify-center">
+                            <div
+                                class="w-14 h-14 rounded-full bg-white dark:bg-gray-800 shadow-lg flex items-center justify-center font-black text-gray-300 dark:text-gray-600 text-xl border-4 border-gray-50 dark:border-gray-900">
+                                VS</div>
+                        </div>
+                        <div
+                            class="text-center w-full p-8 rounded-3xl bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-800/30">
+                            <div
+                                class="w-16 h-16 rounded-full bg-white mx-auto mb-4 shadow-sm flex items-center justify-center text-red-600 font-black text-2xl">
+                                2</div>
+                            <h4 id="player2Name" class="font-black text-xl mb-6 text-red-700 dark:text-red-400">PLAYER
+                                TWO</h4>
+                            <div id="player2Sets" class="flex flex-wrap justify-center gap-3"></div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row justify-center gap-4 border-t dark:border-gray-800 pt-8">
+                        <button onclick="submitMatchResult()"
+                            class="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white px-10 py-4 rounded-2xl font-black shadow-xl shadow-green-200 dark:shadow-none transition-all active:scale-95 flex items-center justify-center">
+                            <i class="fas fa-check-circle mr-3"></i> CONFIRM RESULT
+                        </button>
+                        <button onclick="clearMatchForm()"
+                            class="w-full sm:w-auto bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 px-10 py-4 rounded-2xl font-black transition-all flex items-center justify-center">
+                            DISCARD
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-12">
+                <h3 class="font-black text-lg mb-6 px-2 uppercase tracking-wider text-gray-400">Recent Box Scores</h3>
+                <div id="recentMatches" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            </div>
+        </div>
+
+        <!-- Players Tab -->
+        <div id="players" class="tab-content">
+            <h2 class="text-3xl font-black mb-1">Roster</h2>
+            <p class="text-gray-500 mb-8 font-medium">Add and manage tournament participants</p>
+
+            <div class="card mb-10 overflow-hidden">
+                <div class="bg-gray-50 dark:bg-gray-800/50 p-6 border-b dark:border-gray-800">
+                    <h3 class="font-black text-lg mb-6 flex items-center">
+                        <i class="fas fa-user-plus mr-3 text-blue-500"></i> ADD PARTICIPANT
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <div>
+                            <label
+                                class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Assign
+                                Group</label>
+                            <select id="newPlayerGroup"
+                                class="w-full bg-white dark:bg-gray-700 border dark:border-gray-600 rounded-2xl px-5 py-3.5 font-bold text-sm focus:ring-4 ring-blue-500/10 outline-none">
+                                <option value="A">GROUP A</option>
+                                <option value="B">GROUP B</option>
+                                <option value="C">GROUP C</option>
+                                <option value="D">GROUP D</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label
+                                class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Display
+                                Name</label>
+                            <input type="text" id="newPlayerName" placeholder="e.g. Satyendra N."
+                                class="w-full bg-white dark:bg-gray-700 border dark:border-gray-600 rounded-2xl px-5 py-3.5 font-bold text-sm focus:ring-4 ring-blue-500/10 outline-none">
+                        </div>
+                        <div>
+                            <label
+                                class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Player
+                                Avatar</label>
+                            <div class="flex items-center space-x-4">
+                                <div
+                                    class="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-800 overflow-hidden border dark:border-gray-700">
+                                    <img id="newPlayerAvatarPreview" src="assets/images/default_avatar.png"
+                                        class="w-full h-full object-cover">
+                                </div>
+                                <label
+                                    class="bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 px-4 py-3 rounded-xl cursor-pointer text-xs font-black transition-all">
+                                    CHOOSE
+                                    <input type="file" id="playerAvatarInput" class="hidden" accept="image/*"
+                                        onchange="handlePlayerAvatarUpload(event)">
+                                </label>
+                                <input type="hidden" id="newPlayerAvatarUrl" value="">
+                            </div>
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="addPlayer()"
+                                class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-2xl font-black shadow-lg shadow-blue-200 dark:shadow-none transition-all active:scale-95">
+                                REGISTER
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="playersList" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"></div>
+        </div>
+
+        <!-- Profile Tab -->
+        <div id="profile" class="tab-content">
+            <h2 class="text-3xl font-black mb-1">Account</h2>
+            <p class="text-gray-500 mb-8 font-medium">Manage your personal profile and avatar</p>
+
+            <div class="card max-w-3xl mx-auto !p-0 overflow-hidden">
+                <div class="h-32 bg-gradient-to-r from-blue-600 to-indigo-700"></div>
+                <div class="px-8 pb-12">
+                    <div class="relative -mt-16 mb-8 flex flex-col items-center sm:items-start">
+                        <div class="relative group">
+                            <div
+                                class="w-32 h-32 rounded-[2.5rem] overflow-hidden border-8 border-white dark:border-gray-800 shadow-2xl bg-gray-100 flex items-center justify-center group-hover:brightness-90 transition-all">
+                                <img id="profileAvatar" src="assets/images/default_avatar.png" alt="Profile Avatar"
+                                    class="w-full h-full object-cover">
+                            </div>
+                            <label for="avatarUpload"
+                                class="absolute -bottom-2 -right-2 bg-blue-600 text-white w-12 h-12 rounded-2xl flex items-center justify-center cursor-pointer shadow-xl border-4 border-white dark:border-gray-800 hover:scale-110 transition-transform active:scale-95">
+                                <i class="fas fa-camera"></i>
+                                <input type="file" id="avatarUpload" class="hidden"
+                                    accept="image/png, image/jpeg, image/webp" onchange="handleAvatarUpload(event)">
+                            </label>
+                        </div>
+                        <div class="mt-4 text-center sm:text-left">
+                            <h3 class="text-2xl font-black uppercase tracking-tight" id="profileDisplayName">Satyendra
+                                Namdeo</h3>
+                            <p class="text-gray-400 font-bold text-xs uppercase tracking-[0.2em] mt-1">Tournament Admin
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+                        <div class="space-y-6">
+                            <div>
+                                <label
+                                    class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Public
+                                    Name</label>
+                                <input type="text" id="profileName" value="Satyendra Namdeo"
+                                    class="w-full bg-gray-50 dark:bg-gray-800/50 border dark:border-gray-700 rounded-2xl px-6 py-4 font-bold outline-none focus:ring-4 ring-blue-500/10">
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Email
+                                    Address</label>
+                                <input type="email" value="admin@clash78.com" disabled
+                                    class="w-full bg-gray-100 dark:bg-gray-800/30 border dark:border-gray-700 rounded-2xl px-6 py-4 font-bold text-gray-400 cursor-not-allowed">
+                            </div>
+                        </div>
+                        <div class="space-y-6">
+                            <div>
+                                <label
+                                    class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Bio
+                                    / Tagline</label>
+                                <textarea rows="4"
+                                    class="w-full bg-gray-50 dark:bg-gray-800/50 border dark:border-gray-700 rounded-2xl px-6 py-4 font-bold outline-none focus:ring-4 ring-blue-500/10 resize-none">Managing the official Table Tennis Tournament of 2026.</textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end pt-8 border-t dark:border-gray-800">
+                        <button onclick="saveProfile()"
+                            class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-12 py-4 rounded-2xl font-black shadow-xl shadow-blue-200 dark:shadow-none transition-all active:scale-95">
+                            SAVE CHANGES
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div id="settings" class="tab-content">
+            <h2 class="text-3xl font-black mb-1">Configuration</h2>
+            <p class="text-gray-500 mb-8 font-medium">Personalize your tournament experience</p>
+
+            <div class="card max-w-2xl mx-auto px-8 py-10">
+                <div class="space-y-10">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-4">
+                            <div
+                                class="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-400">
+                                <i class="fas fa-moon"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-black text-lg">Dark Mode UI</h4>
+                                <p class="text-xs text-gray-400 font-bold uppercase tracking-widest">Visual Theme</p>
+                            </div>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="darkModeToggle" class="sr-only peer" onchange="toggleDarkMode()">
+                            <div
+                                class="w-14 h-7 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600">
+                            </div>
+                        </label>
+                    </div>
+
+                    <div class="flex items-center justify-between border-t dark:border-gray-800 pt-10">
+                        <div class="flex items-center space-x-4">
+                            <div
+                                class="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-400">
+                                <i class="fas fa-bell"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-black text-lg">Push Notifications</h4>
+                                <p class="text-xs text-gray-400 font-bold uppercase tracking-widest">Real-time Alerts
+                                </p>
+                            </div>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" checked class="sr-only peer">
+                            <div
+                                class="w-14 h-7 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600">
+                            </div>
+                        </label>
+                    </div>
+
+                    <div class="flex items-center justify-between border-t dark:border-gray-800 pt-10">
+                        <div class="flex items-center space-x-4">
+                            <div
+                                class="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-400">
+                                <i class="fas fa-database"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-black text-lg">Auto Sync</h4>
+                                <p class="text-xs text-gray-400 font-bold uppercase tracking-widest">Cloud Data</p>
+                            </div>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" checked class="sr-only peer">
+                            <div
+                                class="w-14 h-7 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600">
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="max-w-7xl mx-auto">
+            <div class="flex flex-col items-center">
+                <div class="bg-gray-800 p-3 rounded-2xl mb-8">
+                    <img src="assets/images/logo.jpg" alt="Logo" class="h-8 grayscale opacity-50">
+                </div>
+                <div
+                    class="flex flex-wrap justify-center gap-x-12 gap-y-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-12">
+                    <a href="javascript:showTab('dashboard')" class="hover:text-white transition">Dashboard</a>
+                    <a href="javascript:showTab('fixtures')" class="hover:text-white transition">Fixtures</a>
+                    <a href="javascript:showTab('standings')" class="hover:text-white transition">Standings</a>
+                    <a href="javascript:showTab('profile')" class="hover:text-white transition">Account</a>
+                    <a href="#" class="hover:text-white transition">Terms</a>
+                </div>
+                <div class="pt-8 border-t border-gray-800/50 w-full max-w-sm mt-8">
+                    <p class="text-[10px] text-gray-600 font-bold uppercase tracking-widest mb-2">Developed By</p>
+                    <p class="text-white font-black text-lg">Satyendra Kumar Namdeo</p>
+                    <p class="text-gray-500 text-xs mt-6">© 2026 TableTennis Clash78. All rights reserved.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- FAB -->
+    <button class="fab ripple" onclick="showTab('matches')">
+        <i class="fas fa-plus"></i>
+    </button>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay"
+        class="fixed inset-0 bg-white/60 dark:bg-black/60 backdrop-blur-md flex items-center justify-center z-[2000] hidden">
+        <div class="text-center">
+            <div
+                class="w-16 h-16 border-[6px] border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-6 shadow-xl">
+            </div>
+            <p class="text-gray-900 dark:text-white font-black uppercase tracking-widest text-sm">Processing Data</p>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="fixed top-24 right-4 z-[1500] space-y-3 pointer-events-none"></div>
+
+    <!-- Scripts -->
+    <script src="{{ url_for('send_js', path='app.js') }}"></script>
+    <script src="{{ url_for('send_js', path='tournament.js') }}"></script>
+    <script src="{{ url_for('send_js', path='fixtures.js') }}"></script>
+    <script src="{{ url_for('send_js', path='standings.js') }}"></script>
+    <script src="{{ url_for('send_js', path='matches.js') }}"></script>
+    <script src="{{ url_for('send_js', path='realtime.js') }}"></script>
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
+
+            if (sidebar.classList.contains('open')) {
+                document.body.style.overflow = 'hidden';
+            } else {
+                document.body.style.overflow = '';
+            }
+        }
+
+        function closeSidebarOnMobile() {
+            if (window.innerWidth < 1024) {
+                toggleSidebar();
+            }
+        }
+
+        async function handlePlayerAvatarUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            try {
+                if (window.tournamentManager) window.tournamentManager.showLoading(true);
+                const formData = new FormData();
+                formData.append('avatar', file);
+
+                const response = await fetch('/api/upload-avatar', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    document.getElementById('newPlayerAvatarPreview').src = data.url;
+                    document.getElementById('newPlayerAvatarUrl').value = data.url;
+                } else {
+                    throw new Error(data.error);
+                }
+            } catch (error) {
+                showSimpleToast('Avatar upload failed', 'error');
+            } finally {
+                if (window.tournamentManager) window.tournamentManager.showLoading(false);
+            }
+        }
+
+        async function handleAvatarUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Validation: Max 2MB, Image only
+            if (file.size > 2 * 1024 * 1024) {
+                showSimpleToast('Error: File exceeds 2MB limit', 'error');
+                return;
+            }
+            if (!file.type.startsWith('image/')) {
+                showSimpleToast('Error: Only images allowed', 'error');
+                return;
+            }
+
+            try {
+                if (window.tournamentManager) window.tournamentManager.showLoading(true);
+
+                const formData = new FormData();
+                formData.append('avatar', file);
+
+                const response = await fetch('/api/upload-avatar', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    const avatarUrl = data.url;
+                    document.getElementById('profileAvatar').src = avatarUrl;
+                    window.pendingAvatarUrl = avatarUrl;
+                    showSimpleToast('Avatar uploaded successfully', 'success');
+                } else {
+                    throw new Error(data.error || 'Upload failed');
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                showSimpleToast('Upload failed: ' + error.message, 'error');
+            } finally {
+                if (window.tournamentManager) window.tournamentManager.showLoading(false);
+            }
+        }
+
+        function saveProfile() {
+            const name = document.getElementById('profileName').value.trim();
+            if (!name) {
+                showSimpleToast('Name cannot be empty', 'error');
+                return;
+            }
+
+            if (window.pendingAvatarUrl) {
+                localStorage.setItem('userAvatar', window.pendingAvatarUrl);
+                document.getElementById('headerAvatar').src = window.pendingAvatarUrl;
+                document.getElementById('sidebarAvatar').src = window.pendingAvatarUrl;
+                // Important: Update global visibility
+                window.currentUserAvatar = window.pendingAvatarUrl;
+            }
+
+            localStorage.setItem('userName', name);
+            document.getElementById('userName').textContent = name;
+            document.getElementById('profileDisplayName').textContent = name;
+
+            showSimpleToast('Profile updated successfully!', 'success');
+        }
+
+        function showSimpleToast(message, type) {
+            if (window.tournamentManager) {
+                window.tournamentManager.showToast(message, type);
+            } else {
+                alert(message);
+            }
+        }
+
+        function logout() {
+            if (confirm('Are you sure you want to sign out?')) {
+                window.location.reload();
+            }
+        }
+
+        // Ripple Effect
+        document.addEventListener('click', function (e) {
+            if (e.target.closest('.ripple') || e.target.closest('.nav-item') || e.target.closest('button')) {
+                const target = e.target.closest('.ripple') || e.target.closest('.nav-item') || e.target.closest('button');
+                const ripple = document.createElement('span');
+                ripple.classList.add('ripple-effect');
+                target.appendChild(ripple);
+                const rect = target.getBoundingClientRect();
+                const size = Math.max(rect.width, rect.height);
+                ripple.style.width = ripple.style.height = size + 'px';
+                ripple.style.left = e.clientX - rect.left - size / 2 + 'px';
+                ripple.style.top = e.clientY - rect.top - size / 2 + 'px';
+                ripple.addEventListener('animationend', () => ripple.remove());
+            }
+        });
+
+        // Initial Setup
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedAvatar = localStorage.getItem('userAvatar');
+            const savedName = localStorage.getItem('userName');
+
+            if (savedAvatar) {
+                document.getElementById('profileAvatar').src = savedAvatar;
+                document.getElementById('headerAvatar').src = savedAvatar;
+                document.getElementById('sidebarAvatar').src = savedAvatar;
+            }
+            if (savedName) {
+                document.getElementById('profileName').value = savedName;
+                document.getElementById('userName').textContent = savedName;
+                document.getElementById('profileDisplayName').textContent = savedName;
+            }
+
+            // Sync navigation highlight
+            window.addEventListener('hashchange', () => {
+                const hash = window.location.hash.replace('#', '') || 'dashboard';
+                // Handled by showTab but we can ensure visual sync here if needed
+            });
+        });
+    </script>
+</body>
+
+</html>

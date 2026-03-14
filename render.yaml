@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: table-tennis-tournament
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: RENDER
+        value: true
+      - key: PORT
+        value: 10000
+    disk:
+      name: tournament-data
+      mountPath: /var/lib/tournament
+      sizeGB: 1
